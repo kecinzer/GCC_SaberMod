@@ -218,7 +218,7 @@ Fortran
 ; Documented in C
 
 Wcharacter-truncation
-Fortran Warning
+Fortran Var(warn_character_truncation) Warning LangEnabledBy(Fortran,Wall)
 Warn about truncated character expressions
 
 Wcompare-reals
@@ -262,12 +262,16 @@ Fortran
 ; Documented in C/C++
 
 Wuse-without-only
-Fortran Warning
+Fortran Var(warn_use_without_only) Warning
 Warn about USE statements that have no ONLY qualifier
 
 Wopenmp-simd
 Fortran
 ; Documented in C
+
+Wpedantic
+Fortran
+; Documented in common.opt
 
 Wreal-q-constant
 Fortran Warning
@@ -294,8 +298,12 @@ Fortran Warning
 Warn about \"suspicious\" constructs
 
 Wtabs
-Fortran Warning
+Fortran Warning Var(warn_tabs) LangEnabledBy(Fortran,Wall)
 Permit nonconforming uses of the tab character
+
+Wtabs
+LangEnabledBy(Fortran,Wpedantic)
+;
 
 Wunderflow
 Fortran Warning

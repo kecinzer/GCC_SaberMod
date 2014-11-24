@@ -40,6 +40,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #include "diagnostic.h"
 #include "diagnostic-color.h"
+#include "tree-diagnostic.h" /* tree_diagnostics_defaults */
 
 static int suppress_errors = 0;
 
@@ -932,6 +933,7 @@ gfc_notify_std (int std, const char *gmsgid, ...)
 
 
 /* Immediate warning (i.e. do not buffer the warning).  */
+/* Use gfc_warning_now_2 instead, unless gmsgid contains a %L.  */
 
 void
 gfc_warning_now (const char *gmsgid, ...)
@@ -956,6 +958,45 @@ gfc_warning_now (const char *gmsgid, ...)
     gfc_increment_error_count();
 
   buffer_flag = i;
+}
+
+/* Called from output_format -- during diagnostic message processing
+   to handle Fortran specific format specifiers with the following meanings:
+
+   %C  Current locus (no argument)
+   %L  Takes locus argument
+*/
+static bool
+gfc_format_decoder (pretty_printer *pp,
+		    text_info *text, const char *spec,
+		    int precision ATTRIBUTE_UNUSED, bool wide ATTRIBUTE_UNUSED,
+		    bool plus ATTRIBUTE_UNUSED, bool hash ATTRIBUTE_UNUSED)
+{
+  switch (*spec)
+    {
+    case 'C':
+    case 'L':
+      {
+	static const char *result = "(1)";
+	locus *loc;
+	if (*spec == 'C')
+	  loc = &gfc_current_locus;
+	else
+	  loc = va_arg (*text->args_ptr, locus *);
+	gcc_assert (loc->nextc - loc->lb->line >= 0);
+	unsigned int offset = loc->nextc - loc->lb->line;
+	gcc_assert (text->locus);
+	*text->locus
+	  = linemap_position_for_loc_and_offset (line_table,
+						 loc->lb->location,
+						 offset);
+	global_dc->caret_char = '1';
+	pp_string (pp, result);
+	return true;
+      }
+    default:
+      return false;
+    }
 }
 
 /* Return a malloc'd string describing a location.  The caller is
@@ -987,7 +1028,7 @@ gfc_diagnostic_build_prefix (diagnostic_context *context,
 				diagnostic_kind_color[diagnostic->kind]);
       text_ce = colorize_stop (pp_show_color (pp));
     }
-  return build_message_string ("%s%s%s: ", text_cs, text, text_ce);
+  return build_message_string ("%s%s:%s ", text_cs, text, text_ce);
 }
 
 /* Return a malloc'd string describing a location.  The caller is
@@ -1053,6 +1094,7 @@ gfc_diagnostic_finalizer (diagnostic_context *context,
 }
 
 /* Immediate warning (i.e. do not buffer the warning).  */
+/* This function uses the common diagnostics, but does not support %L, yet.  */
 
 bool
 gfc_warning_now_2 (int opt, const char *gmsgid, ...)
@@ -1071,6 +1113,7 @@ gfc_warning_now_2 (int opt, const char *gmsgid, ...)
 }
 
 /* Immediate warning (i.e. do not buffer the warning).  */
+/* This function uses the common diagnostics, but does not support %L, yet.  */
 
 bool
 gfc_warning_now_2 (const char *gmsgid, ...)
@@ -1089,6 +1132,7 @@ gfc_warning_now_2 (const char *gmsgid, ...)
 
 
 /* Immediate error (i.e. do not buffer).  */
+/* This function uses the common diagnostics, but does not support %L, yet.  */
 
 void
 gfc_error_now_2 (const char *gmsgid, ...)
@@ -1100,6 +1144,24 @@ gfc_error_now_2 (const char *gmsgid, ...)
   diagnostic_set_info (&diagnostic, gmsgid, &argp, UNKNOWN_LOCATION, DK_ERROR);
   report_diagnostic (&diagnostic);
   va_end (argp);
+}
+
+
+/* Fatal error, never returns.  */
+/* This function uses the common diagnostics, but does not support %L, yet.  */
+
+void
+gfc_fatal_error (const char *gmsgid, ...)
+{
+  va_list argp;
+  diagnostic_info diagnostic;
+
+  va_start (argp, gmsgid);
+  diagnostic_set_info (&diagnostic, gmsgid, &argp, UNKNOWN_LOCATION, DK_FATAL);
+  report_diagnostic (&diagnostic);
+  va_end (argp);
+
+  gcc_unreachable ();
 }
 
 /* Clear the warning flag.  */
@@ -1180,6 +1242,7 @@ warning:
 
 
 /* Immediate error.  */
+/* Use gfc_error_now_2 instead, unless gmsgid contains a %L.  */
 
 void
 gfc_error_now (const char *gmsgid, ...)
@@ -1210,9 +1273,10 @@ gfc_error_now (const char *gmsgid, ...)
 
 
 /* Fatal error, never returns.  */
+/* Use gfc_fatal_error instead, unless gmsgid contains a %L.  */
 
 void
-gfc_fatal_error (const char *gmsgid, ...)
+gfc_fatal_error_1 (const char *gmsgid, ...)
 {
   va_list argp;
 
@@ -1354,6 +1418,18 @@ gfc_errors_to_warnings (int f)
 void
 gfc_diagnostics_init (void)
 {
+  diagnostic_starter (global_dc) = gfc_diagnostic_starter;
+  diagnostic_finalizer (global_dc) = gfc_diagnostic_finalizer;
+  diagnostic_format_decoder (global_dc) = gfc_format_decoder;
+  global_dc->caret_char = '^';
+}
+
+void
+gfc_diagnostics_finish (void)
+{
+  tree_diagnostics_defaults (global_dc);
+  /* We still want to use the gfc starter and finalizer, not the tree
+     defaults.  */
   diagnostic_starter (global_dc) = gfc_diagnostic_starter;
   diagnostic_finalizer (global_dc) = gfc_diagnostic_finalizer;
   global_dc->caret_char = '^';

@@ -26,7 +26,7 @@
 
 #include <sys/syscall.h>
 
-#if !defined(SYS_futex)
+#if !defined (SYS_futex)
 #define SYS_futex __NR_futex
 #endif
 

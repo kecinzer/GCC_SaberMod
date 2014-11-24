@@ -64,6 +64,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "target-def.h"
 #include "debug.h"
 #include "langhooks.h"
+#include "insn-codes.h"
 #include "optabs.h"
 #include "hash-table.h"
 #include "tree-ssa-alias.h"
@@ -12035,7 +12036,7 @@ s390_option_override (void)
 /* Implement TARGET_USE_BY_PIECES_INFRASTRUCTURE_P.  */
 
 static bool
-s390_use_by_pieces_infrastructure_p (unsigned int size,
+s390_use_by_pieces_infrastructure_p (unsigned HOST_WIDE_INT size,
 				     unsigned int align ATTRIBUTE_UNUSED,
 				     enum by_pieces_operation op ATTRIBUTE_UNUSED,
 				     bool speed_p ATTRIBUTE_UNUSED)
