@@ -540,7 +540,7 @@ gfc_trans_return (gfc_code * code)
       if (!result)
 	{
 	  gfc_warning ("An alternate return at %L without a * dummy argument",
-			&code->expr1->where);
+		       &code->expr1->where);
 	  return gfc_generate_return ();
 	}
 
@@ -865,9 +865,9 @@ gfc_trans_sync (gfc_code *code, gfc_exec_op type)
 	{
 	  /* FIXME.  */
 	  if (code->expr1->ts.kind != gfc_c_int_kind)
-	    gfc_fatal_error_1 ("Sorry, only support for integer kind %d "
-			       "implemented for image-set at %L",
-			       gfc_c_int_kind, &code->expr1->where);
+	    gfc_fatal_error ("Sorry, only support for integer kind %d "
+			     "implemented for image-set at %L",
+			     gfc_c_int_kind, &code->expr1->where);
 
 	  gfc_conv_array_parameter (&se, code->expr1, true, NULL, NULL, &len);
 	  images = se.expr;

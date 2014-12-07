@@ -1252,7 +1252,7 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
    the pic register when possible.  The change is visible after the
    prologue has been emitted.  */
 
-#define REAL_PIC_OFFSET_TABLE_REGNUM  BX_REG
+#define REAL_PIC_OFFSET_TABLE_REGNUM  (TARGET_64BIT ? R15_REG : BX_REG)
 
 #define PIC_OFFSET_TABLE_REGNUM						\
   ((TARGET_64BIT && (ix86_cmodel == CM_SMALL_PIC			\
@@ -1311,6 +1311,7 @@ enum reg_class
   FP_TOP_REG, FP_SECOND_REG,	/* %st(0) %st(1) */
   FLOAT_REGS,
   SSE_FIRST_REG,
+  NO_REX_SSE_REGS,
   SSE_REGS,
   EVEX_SSE_REGS,
   BND_REGS,
@@ -1369,6 +1370,7 @@ enum reg_class
    "FP_TOP_REG", "FP_SECOND_REG",	\
    "FLOAT_REGS",			\
    "SSE_FIRST_REG",			\
+   "NO_REX_SSE_REGS",			\
    "SSE_REGS",				\
    "EVEX_SSE_REGS",			\
    "BND_REGS",				\
@@ -1409,6 +1411,7 @@ enum reg_class
     { 0x0200,       0x0,    0x0 },       /* FP_SECOND_REG */             \
     { 0xff00,       0x0,    0x0 },       /* FLOAT_REGS */                \
   { 0x200000,       0x0,    0x0 },       /* SSE_FIRST_REG */             \
+{ 0x1fe00000,  0x000000,    0x0 },       /* NO_REX_SSE_REGS */           \
 { 0x1fe00000,  0x1fe000,    0x0 },       /* SSE_REGS */                  \
        { 0x0,0xffe00000,   0x1f },       /* EVEX_SSE_REGS */             \
        { 0x0,       0x0,0x1e000 },       /* BND_REGS */			 \

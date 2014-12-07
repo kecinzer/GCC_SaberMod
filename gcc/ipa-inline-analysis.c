@@ -880,9 +880,19 @@ evaluate_conditions_for_known_args (struct cgraph_node *node,
 	}
       if (c->code == IS_NOT_CONSTANT || c->code == CHANGED)
 	continue;
-      res = fold_binary_to_constant (c->code, boolean_type_node, val, c->val);
-      if (res && integer_zerop (res))
-	continue;
+
+      if (operand_equal_p (TYPE_SIZE (TREE_TYPE (c->val)),
+			   TYPE_SIZE (TREE_TYPE (val)), 0))
+	{
+	  val = fold_unary (VIEW_CONVERT_EXPR, TREE_TYPE (c->val), val);
+
+	  res = val
+	    ? fold_binary_to_constant (c->code, boolean_type_node, val, c->val)
+	    : NULL;
+
+	  if (res && integer_zerop (res))
+	    continue;
+	}
       clause |= 1 << (i + predicate_first_dynamic_condition);
     }
   return clause;
@@ -4031,7 +4041,7 @@ inline_generate_summary (void)
 
   /* When not optimizing, do not bother to analyze.  Inlining is still done
      because edge redirection needs to happen there.  */
-  if (!optimize && !flag_generate_lto && !flag_wpa)
+  if (!optimize && !flag_generate_lto && !flag_generate_offload && !flag_wpa)
     return;
 
   function_insertion_hook_holder =

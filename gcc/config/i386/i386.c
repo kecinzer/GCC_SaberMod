@@ -13113,7 +13113,11 @@ legitimate_pic_address_disp_p (rtx disp)
 		return true;
 	    }
 	  else if (!SYMBOL_REF_FAR_ADDR_P (op0)
-		   && SYMBOL_REF_LOCAL_P (op0)
+		   && (SYMBOL_REF_LOCAL_P (op0)
+		       || (HAVE_LD_PIE_COPYRELOC
+			   && flag_pie
+			   && !SYMBOL_REF_WEAK (op0)
+			   && !SYMBOL_REF_FUNCTION_P (op0)))
 		   && ix86_cmodel != CM_LARGE_PIC)
 	    return true;
 	  break;
@@ -24464,7 +24468,8 @@ decide_alg (HOST_WIDE_INT count, HOST_WIDE_INT expected_size,
 		      *noalign = alg_noalign;
 		      return alg;
 		    }
-		  break;
+		  else if (!any_alg_usable_p)
+		    break;
 		}
 	      else if (alg_usable_p (candidate, memset))
 		{
@@ -24502,9 +24507,10 @@ decide_alg (HOST_WIDE_INT count, HOST_WIDE_INT expected_size,
       alg = decide_alg (count, max / 2, min_size, max_size, memset,
 			zero_memset, dynamic_check, noalign);
       gcc_assert (*dynamic_check == -1);
-      gcc_assert (alg != libcall);
       if (TARGET_INLINE_STRINGOPS_DYNAMICALLY)
 	*dynamic_check = max;
+      else
+	gcc_assert (alg != libcall);
       return alg;
     }
   return (alg_usable_p (algs->unknown_size, memset)
@@ -34111,7 +34117,7 @@ add_condition_to_bb (tree function_decl, tree version_decl,
 
   convert_expr = build1 (CONVERT_EXPR, ptr_type_node,
 	     		 build_fold_addr_expr (version_decl));
-  result_var = create_tmp_var (ptr_type_node, NULL);
+  result_var = create_tmp_var (ptr_type_node);
   convert_stmt = gimple_build_assign (result_var, convert_expr); 
   return_stmt = gimple_build_return (result_var);
 
@@ -34128,7 +34134,7 @@ add_condition_to_bb (tree function_decl, tree version_decl,
 
   while (predicate_chain != NULL)
     {
-      cond_var = create_tmp_var (integer_type_node, NULL);
+      cond_var = create_tmp_var (integer_type_node);
       predicate_decl = TREE_PURPOSE (predicate_chain);
       predicate_arg = TREE_VALUE (predicate_chain);
       call_cond_stmt = gimple_build_call (predicate_decl, 1, predicate_arg);
@@ -34235,7 +34241,8 @@ get_builtin_code_for_version (tree decl, tree *predicate_list)
     P_FMA,    
     P_PROC_FMA,
     P_AVX2,
-    P_PROC_AVX2
+    P_PROC_AVX2,
+    P_AVX512F
   };
 
  enum feature_priority priority = P_ZERO;
@@ -34263,7 +34270,8 @@ get_builtin_code_for_version (tree decl, tree *predicate_list)
       {"fma4", P_FMA4},
       {"xop", P_XOP},
       {"fma", P_FMA},
-      {"avx2", P_AVX2}
+      {"avx2", P_AVX2},
+      {"avx512f", P_AVX512F}
     };
 
 
@@ -35238,6 +35246,7 @@ fold_builtin_cpu (tree fndecl, tree *args)
     F_FMA4,
     F_XOP,
     F_FMA,
+    F_AVX512F,
     F_MAX
   };
 
@@ -35326,7 +35335,8 @@ fold_builtin_cpu (tree fndecl, tree *args)
       {"fma4",   F_FMA4},
       {"xop",    F_XOP},
       {"fma",    F_FMA},
-      {"avx2",   F_AVX2}
+      {"avx2",   F_AVX2},
+      {"avx512f",F_AVX512F}
     };
 
   tree __processor_model_type = build_processor_model_struct ();
@@ -51333,12 +51343,12 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
 {
   if (!TARGET_80387 && !TARGET_SSE_MATH)
     return;
-  tree exceptions_var = create_tmp_var (integer_type_node, NULL);
+  tree exceptions_var = create_tmp_var (integer_type_node);
   if (TARGET_80387)
     {
       tree fenv_index_type = build_index_type (size_int (6));
       tree fenv_type = build_array_type (unsigned_type_node, fenv_index_type);
-      tree fenv_var = create_tmp_var (fenv_type, NULL);
+      tree fenv_var = create_tmp_var (fenv_type);
       mark_addressable (fenv_var);
       tree fenv_ptr = build_pointer_type (fenv_type);
       tree fenv_addr = build1 (ADDR_EXPR, fenv_ptr, fenv_var);
@@ -51352,7 +51362,7 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
       *hold = build2 (COMPOUND_EXPR, void_type_node, hold_fnstenv,
 		      hold_fnclex);
       *clear = build_call_expr (fnclex, 0);
-      tree sw_var = create_tmp_var (short_unsigned_type_node, NULL);
+      tree sw_var = create_tmp_var (short_unsigned_type_node);
       tree fnstsw_call = build_call_expr (fnstsw, 0);
       tree sw_mod = build2 (MODIFY_EXPR, short_unsigned_type_node,
 			    sw_var, fnstsw_call);
@@ -51366,8 +51376,8 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
     }
   if (TARGET_SSE_MATH)
     {
-      tree mxcsr_orig_var = create_tmp_var (unsigned_type_node, NULL);
-      tree mxcsr_mod_var = create_tmp_var (unsigned_type_node, NULL);
+      tree mxcsr_orig_var = create_tmp_var (unsigned_type_node);
+      tree mxcsr_mod_var = create_tmp_var (unsigned_type_node);
       tree stmxcsr = ix86_builtins[IX86_BUILTIN_STMXCSR];
       tree ldmxcsr = ix86_builtins[IX86_BUILTIN_LDMXCSR];
       tree stmxcsr_hold_call = build_call_expr (stmxcsr, 0);

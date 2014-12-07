@@ -2505,7 +2505,8 @@ rs6000_setup_reg_addr_masks (void)
 
 	  /* VMX registers can do (REG & -16) and ((REG+REG) & -16)
 	     addressing on 128-bit types.  */
-	  if (rc == RELOAD_REG_VMX && GET_MODE_SIZE (m2) == 16)
+	  if (rc == RELOAD_REG_VMX && GET_MODE_SIZE (m2) == 16
+	      && (addr_mask & RELOAD_REG_VALID) != 0)
 	    addr_mask |= RELOAD_REG_AND_M16;
 
 	  reg_addr[m].addr_mask[rc] = addr_mask;
@@ -7032,24 +7033,6 @@ rs6000_delegitimize_address (rtx orig_x)
   if (GET_CODE (y) == UNSPEC
       && XINT (y, 1) == UNSPEC_TOCREL)
     {
-#ifdef ENABLE_CHECKING
-      if (REG_P (XVECEXP (y, 0, 1))
-	  && REGNO (XVECEXP (y, 0, 1)) == TOC_REGISTER)
-	{
-	  /* All good.  */
-	}
-      else if (GET_CODE (XVECEXP (y, 0, 1)) == DEBUG_EXPR)
-	{
-	  /* Weirdness alert.  df_note_compute can replace r2 with a
-	     debug_expr when this unspec is in a debug_insn.
-	     Seen in gcc.dg/pr51957-1.c  */
-	}
-      else
-	{
-	  debug_rtx (orig_x);
-	  abort ();
-	}
-#endif
       y = XVECEXP (y, 0, 0);
 
 #ifdef HAVE_AS_TLS
@@ -7592,7 +7575,11 @@ rs6000_legitimize_reload_address (rtx x, machine_mode mode,
 	 naturally aligned.  Since we say the address is good here, we
 	 can't disable offsets from LO_SUMs in mem_operand_gpr.
 	 FIXME: Allow offset from lo_sum for other modes too, when
-	 mem is sufficiently aligned.  */
+	 mem is sufficiently aligned.
+
+	 Also disallow this if the type can go in VMX/Altivec registers, since
+	 those registers do not have d-form (reg+offset) address modes.  */
+      && !reg_addr[mode].scalar_in_vmx_p
       && mode != TFmode
       && mode != TDmode
       && (mode != TImode || !TARGET_VSX_TIMODE)
@@ -7730,6 +7717,13 @@ rs6000_legitimate_address_p (machine_mode mode, rtx x, bool reg_ok_strict)
       && legitimate_constant_pool_address_p (x, mode,
 					     reg_ok_strict || lra_in_progress))
     return 1;
+  /* For TImode, if we have load/store quad and TImode in VSX registers, only
+     allow register indirect addresses.  This will allow the values to go in
+     either GPRs or VSX registers without reloading.  The vector types would
+     tend to go into VSX registers, so we allow REG+REG, while TImode seems
+     somewhat split, in that some uses are GPR based, and some VSX based.  */
+  if (mode == TImode && TARGET_QUAD_MEMORY && TARGET_VSX_TIMODE)
+    return 0;
   /* If not REG_OK_STRICT (before reload) let pass any stack offset.  */
   if (! reg_ok_strict
       && reg_offset_p
@@ -16645,6 +16639,17 @@ rs6000_secondary_reload_memory (rtx addr,
 	    }
 	}
 
+      /* (plus (plus (reg) (constant)) (reg)) is also generated during
+	 push_reload processing, so handle it now.  */
+      else if (GET_CODE (plus_arg0) == PLUS && REG_P (plus_arg1))
+	{
+	  if ((addr_mask & RELOAD_REG_INDEXED) == 0)
+	    {
+	      extra_cost = 1;
+	      type = "indexed #2";
+	    }
+	}
+
       else if (!base_reg_operand (plus_arg0, GET_MODE (plus_arg0)))
 	{
 	  fail_msg = "no base register #2";
@@ -19791,12 +19796,7 @@ rs6000_emit_vector_compare (enum rtx_code rcode,
   if (try_again)
     {
       if (swap_operands)
-	{
-	  rtx tmp;
-	  tmp = op0;
-	  op0 = op1;
-	  op1 = tmp;
-	}
+	std::swap (op0, op1);
 
       mask = rs6000_emit_vector_compare_inner (rcode, op0, op1);
       if (mask)
@@ -20109,9 +20109,7 @@ rs6000_emit_int_cmove (rtx dest, rtx op, rtx true_cond, rtx false_cond)
     default:
       /* We need to swap the sense of the comparison.  */
       {
-	rtx t = true_cond;
-	true_cond = false_cond;
-	false_cond = t;
+	std::swap (false_cond, true_cond);
 	PUT_CODE (condition_rtx, reverse_condition (cond_code));
       }
       break;
@@ -27491,11 +27489,7 @@ rs6000_sched_reorder (FILE *dump ATTRIBUTE_UNUSED, int sched_verbose,
     if (is_nonpipeline_insn (ready[n_ready - 1])
         && (recog_memoized (ready[n_ready - 2]) > 0))
       /* Simply swap first two insns.  */
-      {
-	rtx_insn *tmp = ready[n_ready - 1];
-	ready[n_ready - 1] = ready[n_ready - 2];
-	ready[n_ready - 2] = tmp;
-      }
+      std::swap (ready[n_ready - 1], ready[n_ready - 2]);
   }
 
   if (rs6000_cpu == PROCESSOR_POWER6)
@@ -31300,7 +31294,7 @@ altivec_expand_vec_perm_const (rtx operands[4])
              (or swapped back) to ensure proper right-to-left numbering
              from 0 to 2N-1.  */
 	  if (swapped ^ !BYTES_BIG_ENDIAN)
-	    x = op0, op0 = op1, op1 = x;
+	    std::swap (op0, op1);
 	  if (imode != V16QImode)
 	    {
 	      op0 = gen_lowpart (imode, op0);
@@ -31356,7 +31350,7 @@ rs6000_expand_vec_perm_const_1 (rtx target, rtx op0, rtx op1,
 	return false;
       perm0 -= 2;
       perm1 += 2;
-      x = op0, op0 = op1, op1 = x;
+      std::swap (op0, op1);
     }
   /* If the second selector does not come from the second operand, fail.  */
   else if ((perm1 & 2) == 0)
@@ -32834,6 +32828,8 @@ rs6000_legitimate_constant_p (machine_mode mode, rtx x)
 void
 rs6000_call_aix (rtx value, rtx func_desc, rtx flag, rtx cookie)
 {
+  const bool direct_call_p
+    = GET_CODE (func_desc) == SYMBOL_REF && SYMBOL_REF_FUNCTION_P (func_desc);
   rtx toc_reg = gen_rtx_REG (Pmode, TOC_REGNUM);
   rtx toc_load = NULL_RTX;
   rtx toc_restore = NULL_RTX;
@@ -32902,8 +32898,11 @@ rs6000_call_aix (rtx value, rtx func_desc, rtx flag, rtx cookie)
 							func_toc_offset));
 	  toc_load = gen_rtx_USE (VOIDmode, func_toc_mem);
 
-	  /* If we have a static chain, load it up.  */
-	  if (TARGET_POINTERS_TO_NESTED_FUNCTIONS)
+	  /* If we have a static chain, load it up.  But, if the call was
+	     originally direct, the 3rd word has not been written since no
+	     trampoline has been built, so we ought not to load it, lest we
+	     override a static chain value.  */
+	  if (!direct_call_p && TARGET_POINTERS_TO_NESTED_FUNCTIONS)
 	    {
 	      rtx sc_reg = gen_rtx_REG (Pmode, STATIC_CHAIN_REGNUM);
 	      rtx func_sc_offset = GEN_INT (2 * GET_MODE_SIZE (Pmode));
@@ -34890,7 +34889,7 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
 	  DECL_EXTERNAL (atomic_update_decl) = 1;
 	}
 
-      tree fenv_var = create_tmp_var (double_type_node, NULL);
+      tree fenv_var = create_tmp_var (double_type_node);
       mark_addressable (fenv_var);
       tree fenv_addr = build1 (ADDR_EXPR, double_ptr_type_node, fenv_var);
 
@@ -34918,7 +34917,7 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
   const unsigned HOST_WIDE_INT hold_exception_mask =
     HOST_WIDE_INT_C (0xffffffff00000007);
 
-  tree fenv_var = create_tmp_var (double_type_node, NULL);
+  tree fenv_var = create_tmp_var (double_type_node);
 
   tree hold_mffs = build2 (MODIFY_EXPR, void_type_node, fenv_var, call_mffs);
 
@@ -34947,7 +34946,7 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
   const unsigned HOST_WIDE_INT clear_exception_mask =
     HOST_WIDE_INT_C (0xffffffff00000000);
 
-  tree fenv_clear = create_tmp_var (double_type_node, NULL);
+  tree fenv_clear = create_tmp_var (double_type_node);
 
   tree clear_mffs = build2 (MODIFY_EXPR, void_type_node, fenv_clear, call_mffs);
 
@@ -34979,7 +34978,7 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
   const unsigned HOST_WIDE_INT new_exception_mask =
     HOST_WIDE_INT_C (0x1ff80fff);
 
-  tree old_fenv = create_tmp_var (double_type_node, NULL);
+  tree old_fenv = create_tmp_var (double_type_node);
   tree update_mffs = build2 (MODIFY_EXPR, void_type_node, old_fenv, call_mffs);
 
   tree old_llu = build1 (VIEW_CONVERT_EXPR, uint64_type_node, old_fenv);

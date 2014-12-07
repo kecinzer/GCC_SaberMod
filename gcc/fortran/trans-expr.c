@@ -1111,12 +1111,13 @@ assign:
 static void
 realloc_lhs_warning (bt type, bool array, locus *where)
 {
-  if (array && type != BT_CLASS && type != BT_DERIVED
-      && gfc_option.warn_realloc_lhs)
-    gfc_warning ("Code for reallocating the allocatable array at %L will "
+  if (array && type != BT_CLASS && type != BT_DERIVED && warn_realloc_lhs)
+    gfc_warning (OPT_Wrealloc_lhs,
+		 "Code for reallocating the allocatable array at %L will "
 		 "be added", where);
-  else if (gfc_option.warn_realloc_lhs_all)
-    gfc_warning ("Code for reallocating the allocatable variable at %L "
+  else if (warn_realloc_lhs_all)
+    gfc_warning (OPT_Wrealloc_lhs_all,
+		 "Code for reallocating the allocatable variable at %L "
 		 "will be added", where);
 }
 
