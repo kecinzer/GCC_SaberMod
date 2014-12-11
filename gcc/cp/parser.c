@@ -2977,6 +2977,7 @@ cp_parser_diagnose_invalid_type_name (cp_parser *parser, tree id,
 	inform (location, "C++11 %<noexcept%> only available with "
 		"-std=c++11 or -std=gnu++11");
       else if (cxx_dialect < cxx11
+	       && TREE_CODE (id) == IDENTIFIER_NODE
 	       && !strcmp (IDENTIFIER_POINTER (id), "thread_local"))
 	inform (location, "C++11 %<thread_local%> only available with "
 		"-std=c++11 or -std=gnu++11");
@@ -5207,7 +5208,10 @@ cp_parser_unqualified_id (cp_parser* parser,
 	case RID_PRETTY_FUNCTION_NAME:
 	case RID_C99_FUNCTION_NAME:
 	  cp_lexer_consume_token (parser->lexer);
-	  finish_fname (token->u.value);
+	  /* Don't try to declare this while tentatively parsing a function
+	     declarator, as cp_make_fname_decl will fail.  */
+	  if (current_binding_level->kind != sk_function_parms)
+	    finish_fname (token->u.value);
 	  return token->u.value;
 
 	default:

@@ -171,6 +171,9 @@ struct tune_params
   const int memmov_cost;
   const int issue_rate;
   const unsigned int fuseable_ops;
+  const int int_reassoc_width;
+  const int fp_reassoc_width;
+  const int vec_reassoc_width;
 };
 
 HOST_WIDE_INT aarch64_initial_elimination_offset (unsigned, unsigned);
@@ -247,7 +250,6 @@ void aarch64_expand_epilogue (bool);
 void aarch64_expand_mov_immediate (rtx, rtx);
 void aarch64_expand_prologue (void);
 void aarch64_expand_vector_init (rtx, rtx);
-void aarch64_function_profiler (FILE *, int);
 void aarch64_init_cumulative_args (CUMULATIVE_ARGS *, const_tree, rtx,
 				   const_tree, unsigned);
 void aarch64_init_expanders (void);
