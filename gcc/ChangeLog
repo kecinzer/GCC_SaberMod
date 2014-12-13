@@ -1,20 +1,219 @@
-2014-12-10  Ulrich Drepper  <drepper@gmail.com>
+2014-12-12  Thomas Schwinge  <thomas@codesourcery.com>
 
-	Minor interface cleanups of libgccjit
-	* jit/jit-playback.c (convert_to_dso): Use auto_vec instead
-	of automatic array to build up command line.
-	* jit/jit-recording.c (recording::context::set_str_option):
-	Make copy of the string.
-	(recording::context::~context): Free string options.
-	* jit/jit-recording.h (recording::context): Adjust type
-	of m_str_options member.
-	* jit/libgccjit.h: Adjust comment about
-	gcc_jit_context_set_str_option parameter begin used after
-	the call.
-	Update comment now that all interfaces are copy strings
-	if necessary.
-	* jit/libgccjit++.h (gccjit::context): Add set_str_option
-	member function.
+	* config/nvptx/nvptx.h (ASM_OUTPUT_ALIGN): Define as a C statment.
+
+2014-12-12  Vladimir Makarov  <vmakarov@redhat.com>
+
+	PR target/64110
+	* lra-constraints.c (process_alt_operands): Refuse alternative
+	when reload pseudo of given class can not hold value of given
+	mode.
+
+2014-12-12  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* gimple-walk.c (walk_gimple_op) <GIMPLE_OMP_FOR>: Also check
+	intermediate walk_tree results for for_incr.
+	<GIMPLE_OMP_TARGET>: Walk child_fn and data_arg, too.
+	<GIMPLE_OMP_CRITICAL, GIMPLE_OMP_ATOMIC_STORE>: Pretty printing.
+
+2014-12-12  Richard Sandiford  <richard.sandiford@arm.com>
+
+	PR middle-end/64182
+	* wide-int.h (wi::div_round, wi::mod_round): Fix rounding of tied
+	cases.
+	* double-int.c (div_and_round_double): Fix handling of unsigned
+	cases.  Use same rounding approach as wide-int.h.
+
+2014-12-12  Marek Polacek  <polacek@redhat.com>
+
+	PR middle-end/64274
+	* fold-const.c (fold_binary_loc): Add ANY_INTEGRAL_TYPE_P check.
+
+2014-12-12  Jakub Jelinek  <jakub@redhat.com>
+
+	PR tree-optimization/64269
+	* tree-ssa-forwprop.c (simplify_builtin_call): Bail out if
+	len2 or diff are too large.
+
+2014-12-12  Richard Biener  <rguenther@suse.de>
+
+	PR middle-end/64280
+	* tree-cfg.c (replace_uses_by): Guard assert properly.
+
+2014-12-12  Anthony Green  <green@moxielogic.com>
+
+	* config/moxie/moxie.md: Add use of zex instruction.
+
+2014-12-12  Marc Glisse  <marc.glisse@inria.fr>
+
+	* real.h (HONOR_SNANS, HONOR_INFINITIES, HONOR_SIGNED_ZEROS,
+	HONOR_SIGN_DEPENDENT_ROUNDING): Replace macros with 3 overloaded
+	declarations.
+	* real.c (HONOR_NANS): Fix indentation.
+	(HONOR_SNANS, HONOR_INFINITIES, HONOR_SIGNED_ZEROS,
+	HONOR_SIGN_DEPENDENT_ROUNDING): Define three overloads.
+	* builtins.c (fold_builtin_cproj, fold_builtin_signbit,
+	fold_builtin_fmin_fmax, fold_builtin_classify): Simplify argument
+	of HONOR_*.
+	* fold-const.c (operand_equal_p, fold_comparison, fold_binary_loc):
+	Likewise.
+	* gimple-fold.c (gimple_val_nonnegative_real_p): Likewise.
+	* ifcvt.c (noce_try_move, noce_try_minmax, noce_try_abs): Likewise.
+	* omp-low.c (omp_reduction_init): Likewise.
+	* rtlanal.c (may_trap_p_1): Likewise.
+	* simplify-rtx.c (simplify_const_relational_operation): Likewise.
+	* tree-ssa-dom.c (record_equality, record_edge_info): Likewise.
+	* tree-ssa-phiopt.c (value_replacement, abs_replacement): Likewise.
+	* tree-ssa-reassoc.c (eliminate_using_constants): Likewise.
+	* tree-ssa-uncprop.c (associate_equivalences_with_edges): Likewise.
+
+2014-12-12  Jan Hubicka  <hubicka@ucw.cz>
+
+	* ipa-inline.c (ipa_inline): Fix condition on when
+	TODO_remove_unreachable_functions is needed.
+
+2014-12-12  Jan Hubicka  <hubicka@ucw.cz>
+
+	* ipa-devirt.c (possible_polymorphic_call_targets): Return early
+	if otr_type has no BINFO.
+
+2014-12-12  Zhenqiang Chen  <zhenqiang.chen@arm.com>
+
+	PR rtl-optimization/63917
+	* ifcvt.c (cc_in_cond): New function.
+	(end_ifcvt_sequence): Make sure new generated insns do not clobber CC.
+	(noce_process_if_block, check_cond_move_block): Check CC references.
+
+2014-12-11  Andrew Pinski  <apinski@cavium.com>
+
+	* config/aarch64/aarch64-protos.h (tune_params): Add align field.
+	* config/aarch64/aarch64.c (generic_tunings): Specify align.
+	(cortexa53_tunings): Likewise.
+	(cortexa57_tunings): Likewise.
+	(thunderx_tunings): Likewise.
+	(aarch64_override_options): Set align_loops, align_jumps,
+	align_functions based on what the tuning struct.
+
+2014-12-11  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* doc/md.texi (Insn Lengths): Fix description of (pc).
+
+2014-12-11  Jan Hubicka  <hubicka@ucw.cz>
+
+	PR ipa/61324
+	* passes.c (execute_todo): Update call of remove_unreachable_nodes.
+	* ipa-chkp.c (chkp_produce_thunks): Use TODO_remove_functions.
+	* cgraphunit.c (symbol_table::process_new_functions): Add
+	IPA_SSA_AFTER_INLINING.
+	(ipa_passes): Update call of remove_unreachable_nodes.
+	(symbol_table::compile): Remove call of remove_unreachable_nodes.
+	* ipa-inline.c (inline_small_functions): Do not ICE with
+	-flto-partition=none
+	(ipa_inline): Update symtab->state; fix formatting
+	update call of remove_unreachable_nodes.
+	* passes.c (execute_todo): Update call of remove_unreachable_nodes.
+	* cgraphclones.c (symbol_table::materialize_all_clones): Likewise.
+	* cgraph.h (enum symtab_state): Add IPA_SSA_AFTER_INLINING.
+	(remove_unreachable_nodes): Update.
+	* ipa.c (process_references): Keep external references only
+	when optimizing.
+	(walk_polymorphic_call_targets): Keep possible polymorphic call
+	target only when devirtualizing.
+	(symbol_table::remove_unreachable_nodes): Remove BEFORE_INLINING_P
+	parameter.
+	(ipa_single_use): Update comment.
+	* ipa-pure-const.c (cdtor_p): New function.
+	(propagate_pure_const): Track if some cdtor was turned pure/const.
+	(execute): Return TODO_remove_functions if needed.
+	* ipa-comdats.c (ipa_comdats): Update comment.
+
+2014-12-11  Aldy Hernandez  <aldyh@redhat.com>
+
+	* dwarf2out.c (gen_lexical_block_die): Remove unused `depth'
+	parameter.
+	(gen_inlined_subroutine_die): Same.
+	(gen_block_die): Same.
+	(decls_for_scope): Same.
+
+2014-12-11  Renlin Li  <renlin.li@arm.com>
+
+	* config/aarch64/aarch64-cores.def: Change all AARCH64_FL_FPSIMD to
+	AARCH64_FL_FOR_ARCH8.
+	* config/aarch64/aarch64.c (all_cores): Use FLAGS from
+	aarch64-cores.def file only.
+
+2014-12-11  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR fortran/44054
+	* diagnostic.c (diagnostic_action_after_output): Make it extern.
+	Take diagnostic_t argument instead of diagnostic_info. Count also
+	DK_WERROR towards max_errors.
+	(diagnostic_report_diagnostic): Update call according to the above.
+	(error_recursion): Likewise.
+	* diagnostic.h (diagnostic_action_after_output): Declare.
+	* pretty-print.c (pp_formatted_text_data): Delete.
+	(pp_append_r): Call output_buffer_append_r.
+	(pp_formatted_text): Call output_buffer_formatted_text.
+	(pp_last_position_in_text): Call output_buffer_last_position_in_text.
+	* pretty-print.h (output_buffer_formatted_text): New.
+	(output_buffer_append_r): New.
+	(output_buffer_last_position_in_text): New.
+
+2014-12-11  Kyrylo Tkachov  kyrylo.tkachov@arm.com
+
+	* config/aarch64/aarch64.c (aarch64_parse_extension): Update error
+	message to say +no only when removing extension.
+
+2014-12-11  Andrew MacLeod  <amacleod@redhat.com>
+
+	* config/tilepro/gen-mul-tables.cc: Add insn-codes.h to include list
+	for generator file.  Add comment indicating it is a generated file.
+	* config/tilepro/mul-tables.c: Update generated file.
+	* config/tilegx/mul-tables.c: Likewise.
+
+2014-12-11  Segher Boessenkool  <segher@kernel.crashing.org>
+
+	* combine.c (try_combine): Do not allow combining a PARALLEL I2
+	with a register move I3 if that I2 is an asm.
+
+2014-12-11  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
+
+	* config/arm/arm_neon.h (vrndqn_f32): Rename to...
+	(vrndnq_f32): ... this.
+	(vrndqa_f32): Rename to...
+	(vrndaq_f32): ... this.
+	(vrndqp_f32): Rename to...
+	(vrndpq_f32): ... this.
+	(vrndqm_f32): Rename to...
+	(vrndmq_f32): ... this.
+	(vrndx_f32): New intrinsic.
+	(vrndxq_f32): Likewise.
+
+2014-12-11  Marek Polacek  <polacek@redhat.com>
+
+	* fold-const.c (fold_negate_expr): Add ANY_INTEGRAL_TYPE_P check.
+	(extract_muldiv_1): Likewise.
+	(maybe_canonicalize_comparison_1): Likewise.
+	(fold_comparison): Likewise.
+	(tree_binary_nonnegative_warnv_p): Likewise.
+	(tree_binary_nonzero_warnv_p): Likewise.
+	* gimple-ssa-strength-reduction.c (legal_cast_p_1): Likewise.
+	* tree-scalar-evolution.c (simple_iv): Likewise.
+	(scev_const_prop): Likewise.
+	* tree-ssa-loop-niter.c (expand_simple_operations): Likewise.
+	* tree-vect-generic.c (expand_vector_operation): Likewise.
+	* tree.h (ANY_INTEGRAL_TYPE_CHECK): Define.
+	(ANY_INTEGRAL_TYPE_P): Define.
+	(TYPE_OVERFLOW_WRAPS, TYPE_OVERFLOW_UNDEFINED, TYPE_OVERFLOW_TRAPS):
+	Add ANY_INTEGRAL_TYPE_CHECK.
+	(any_integral_type_check): New function.
+
+2014-12-11  Tobias Burnus  <burnus@net-b.de>
+	    Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	* error.c (gfc_get_terminal_width): Renamed from
+	get_terminal_width and use same-named common function.
+	(gfc_error_init_1): Update call.
 
 2014-12-10  Aldy Hernandez  <aldyh@redhat.com>
 
