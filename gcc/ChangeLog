@@ -1,3 +1,34 @@
+2014-12-27  H.J. Lu  <hongjiu.lu@intel.com>
+
+	Backport from mainline:
+	2014-12-27  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR target/64409
+	* config/i386/i386.c (ix86_function_type_abi): Issue an error
+	when ms_abi attribute is used with x32.
+
+2014-12-27  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/mmx.md (*vec_extractv2sf_1): Do not emit unpckhps.
+	Emit movshdup for SSE3 and shufps otherwise.
+	(*vec_extractv2si_1): Do not emit punpckhdq and unpckhps.
+	Emit pshufd for SSE2 and shufps otherwise.
+
+2014-12-24  Nick Clifton  <nickc@redhat.com>
+
+	Backport from mainline:
+	2014-06-13  Nick Clifton  <nickc@redhat.com>
+
+	* config/rx/rx.h (JUMP_ALIGN): Return the log value if user
+	requested alignment is active.
+	(LABEL_ALIGN): Likewise.
+	(LOOP_ALIGN): Likewise.
+
+	2014-03-25  Nick Clifton  <nickc@redhat.com>
+
+	* config/rx/rx.c (rx_print_operand): Allow R operator to accept
+	SImode values.
+
 2014-12-17  Ulrich Weigand  <Ulrich.Weigand@de.ibm.com>
 
 	Backport from mainline
