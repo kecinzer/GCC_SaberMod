@@ -195,6 +195,8 @@ extern int fprintf_unlocked (FILE *, const char *, ...);
 
 #include <sys/types.h>
 
+#include <errno.h>
+
 #if !defined (errno) && defined (HAVE_DECL_ERRNO) && !HAVE_DECL_ERRNO
 extern int errno;
 #endif
